@@ -6,10 +6,12 @@ import { Envelope, SpinnerGap, ArrowLeft, CheckCircle } from "@phosphor-icons/re
 import AuthLayout from "@/components/auth/AuthLayout";
 import OTPInput from "@/components/auth/OTPInput";
 import { verifyOTP, resendOTP } from "@/lib/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT();
   
   const email = searchParams.get("email") || "";
   const type = searchParams.get("type") || "login"; // "login" or "register"
@@ -44,23 +46,22 @@ function VerifyContent() {
 
       if (response.success) {
         setSuccess(true);
-        // Wait a moment to show success state
         setTimeout(() => {
           router.push("/dashboard");
         }, 1500);
       } else {
-        setError(response.message || "Invalid verification code");
+        setError(response.message || t("auth.verify.errorInvalid"));
       }
-    } catch (err) {
-      setError("Verification failed. Please try again.");
+    } catch {
+      setError(t("auth.verify.errorGeneric"));
     } finally {
       setIsLoading(false);
     }
-  }, [email, router]);
+  }, [email, router, t]);
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    
+
     setError(null);
     setIsResending(true);
 
@@ -68,12 +69,12 @@ function VerifyContent() {
       const response = await resendOTP(email);
 
       if (response.success) {
-        setResendCooldown(60); // 60 second cooldown
+        setResendCooldown(60);
       } else {
-        setError(response.message || "Failed to resend code");
+        setError(response.message || t("auth.verify.errorResend"));
       }
-    } catch (err) {
-      setError("Failed to resend code. Please try again.");
+    } catch {
+      setError(t("auth.verify.errorResend"));
     } finally {
       setIsResending(false);
     }
@@ -90,16 +91,15 @@ function VerifyContent() {
 
   return (
     <AuthLayout
-      title={success ? "Email verified!" : "Verify your email"}
-      subtitle={success 
-        ? "Redirecting you to your dashboard..." 
-        : `We sent a 6-digit code to ${maskedEmail}`
+      title={success ? t("auth.verify.titleSuccess") : t("auth.verify.title")}
+      subtitle={success
+        ? t("auth.verify.subtitleSuccess")
+        : t("auth.verify.subtitle", { email: maskedEmail })
       }
     >
       {success ? (
-        // Success State
         <div className="py-8 text-center">
-          <div 
+          <div
             className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full"
             style={{
               background: "rgba(16, 185, 129, 0.1)",
@@ -109,7 +109,7 @@ function VerifyContent() {
             <CheckCircle size={40} weight="fill" className="text-emerald-400" />
           </div>
           <p className="text-sm text-white/50">
-            Your account has been verified successfully.
+            {t("auth.verify.successMessage")}
           </p>
         </div>
       ) : (
@@ -161,7 +161,7 @@ function VerifyContent() {
           {/* Resend Code */}
           <div className="text-center">
             <p className="mb-2 text-sm text-white/50">
-              Didn't receive the code?
+              {t("auth.verify.didntReceive")}
             </p>
             <button
               type="button"
@@ -172,17 +172,16 @@ function VerifyContent() {
               {isResending ? (
                 <span className="flex items-center justify-center gap-2">
                   <SpinnerGap size={16} className="animate-spin" />
-                  Sending...
+                  {t("auth.verify.resending")}
                 </span>
               ) : resendCooldown > 0 ? (
-                `Resend in ${resendCooldown}s`
+                t("auth.verify.resendIn", { seconds: resendCooldown })
               ) : (
-                "Resend code"
+                t("auth.verify.resend")
               )}
             </button>
           </div>
 
-          {/* Back to Login/Register */}
           <div className="pt-4">
             <button
               type="button"
@@ -190,13 +189,13 @@ function VerifyContent() {
               className="flex w-full items-center justify-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
             >
               <ArrowLeft size={16} />
-              <span>Back to {type === "register" ? "registration" : "sign in"}</span>
+              <span>{type === "register" ? t("auth.verify.backToRegister") : t("auth.verify.backToLogin")}</span>
             </button>
           </div>
 
           {/* Help text */}
           <p className="text-center text-xs text-white/30">
-            The code expires in 10 minutes. Check your spam folder if you don't see it.
+            {t("auth.verify.expiresNote")}
           </p>
         </div>
       )}
@@ -204,15 +203,20 @@ function VerifyContent() {
   );
 }
 
+function VerifyFallback() {
+  const t = useT();
+  return (
+    <AuthLayout title={t("common.loading")} subtitle="">
+      <div className="flex justify-center py-8">
+        <SpinnerGap size={32} className="animate-spin text-violet-400" />
+      </div>
+    </AuthLayout>
+  );
+}
+
 export default function VerifyPage() {
   return (
-    <Suspense fallback={
-      <AuthLayout title="Loading..." subtitle="Please wait">
-        <div className="flex justify-center py-8">
-          <SpinnerGap size={32} className="animate-spin text-violet-400" />
-        </div>
-      </AuthLayout>
-    }>
+    <Suspense fallback={<VerifyFallback />}>
       <VerifyContent />
     </Suspense>
   );

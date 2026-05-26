@@ -3,6 +3,8 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import LanguageToggle from "@/components/LanguageToggle";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -11,6 +13,7 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
+  const t = useT();
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#030712]">
       {/* Background Effects */}
@@ -71,12 +74,15 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             <span className="text-xl font-bold text-white">IntelX</span>
           </Link>
           
-          <Link 
-            href="/"
-            className="text-sm font-medium text-white/50 transition-colors hover:text-white"
-          >
-            ← Back to Home
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Link
+              href="/"
+              className="text-sm font-medium text-white/50 transition-colors hover:text-white"
+            >
+              {t("auth.layout.backHome")}
+            </Link>
+          </div>
         </header>
 
         {/* Main Content */}
@@ -103,13 +109,13 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 
             {/* Footer */}
             <p className="mt-8 text-center text-xs text-white/30">
-              By continuing, you agree to IntelX's{" "}
+              {t("auth.layout.legalPrefix")}{" "}
               <Link href="/terms" className="text-white/50 underline hover:text-white">
-                Terms of Service
+                {t("auth.layout.terms")}
               </Link>{" "}
-              and{" "}
+              {t("auth.layout.and")}{" "}
               <Link href="/privacy" className="text-white/50 underline hover:text-white">
-                Privacy Policy
+                {t("auth.layout.privacy")}
               </Link>
             </p>
           </div>
