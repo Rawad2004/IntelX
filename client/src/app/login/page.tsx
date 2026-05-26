@@ -13,9 +13,11 @@ import {
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { login, googleAuthCallback, validateEmail } from "@/lib/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,14 +29,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    // Validation
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
+      setError(t("auth.login.errorInvalidEmail"));
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("auth.login.errorShortPassword"));
       return;
     }
 
@@ -45,17 +46,15 @@ export default function LoginPage() {
 
       if (response.success) {
         if (response.requiresVerification) {
-          // Redirect to OTP verification
           router.push(`/verify?email=${encodeURIComponent(email)}`);
         } else {
-          // Redirect to dashboard
           router.push("/dashboard");
         }
       } else {
-        setError(response.message || "Login failed. Please try again.");
+        setError(response.message || t("auth.login.errorFailed"));
       }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch {
+      setError(t("auth.login.errorGeneric"));
     } finally {
       setIsLoading(false);
     }
@@ -68,17 +67,17 @@ export default function LoginPage() {
       if (response.success) {
         router.push("/dashboard");
       } else {
-        setError(response.message || "Google sign-in failed");
+        setError(response.message || t("auth.login.errorFailed"));
       }
-    } catch (err) {
-      setError("Google sign-in failed. Please try again.");
+    } catch {
+      setError(t("auth.login.errorGoogle"));
     }
   };
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to access your behavioral intelligence dashboard"
+      title={t("auth.login.title")}
+      subtitle={t("auth.login.subtitle")}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Error Message */}
@@ -100,7 +99,7 @@ export default function LoginPage() {
             htmlFor="email"
             className="mb-2 block text-sm font-medium text-white/70"
           >
-            Email address
+            {t("auth.login.emailLabel")}
           </label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -111,7 +110,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("auth.login.emailPlaceholder")}
               autoComplete="email"
               disabled={isLoading}
               className="
@@ -136,13 +135,13 @@ export default function LoginPage() {
               htmlFor="password"
               className="text-sm font-medium text-white/70"
             >
-              Password
+              {t("auth.login.passwordLabel")}
             </label>
             <Link
               href="/forgot-password"
               className="text-xs font-medium text-violet-400 hover:text-violet-300"
             >
-              Forgot password?
+              {t("auth.login.forgotPassword")}
             </Link>
           </div>
           <div className="relative">
@@ -154,7 +153,7 @@ export default function LoginPage() {
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t("auth.login.passwordPlaceholder")}
               autoComplete="current-password"
               disabled={isLoading}
               className="
@@ -198,32 +197,29 @@ export default function LoginPage() {
           {isLoading ? (
             <SpinnerGap size={20} className="mx-auto animate-spin" />
           ) : (
-            "Sign in"
+            t("auth.login.submit")
           )}
         </button>
 
-        {/* Divider */}
         <div className="relative flex items-center gap-4 py-2">
           <div className="h-px flex-1 bg-white/10" />
-          <span className="text-xs text-white/30">or continue with</span>
+          <span className="text-xs text-white/30">{t("auth.login.orContinueWith")}</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        {/* Google Button */}
         <GoogleButton
           onSuccess={handleGoogleSuccess}
-          onError={() => setError("Google sign-in failed")}
+          onError={() => setError(t("auth.login.errorGoogle"))}
           text="signin"
         />
 
-        {/* Sign Up Link */}
         <p className="text-center text-sm text-white/50">
-          Don't have an account?{" "}
+          {t("auth.login.noAccount")}{" "}
           <Link
             href="/register"
             className="font-semibold text-violet-400 hover:text-violet-300"
           >
-            Sign up for free
+            {t("auth.login.signupCta")}
           </Link>
         </p>
       </form>

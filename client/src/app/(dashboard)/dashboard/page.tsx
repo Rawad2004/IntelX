@@ -7,6 +7,7 @@ import MatchFilters from "./components/MatchFilters";
 import MatchList from "./components/MatchList";
 import MatchDetail from "./components/MatchDetail";
 import { getToken, clearTokens } from "@/lib/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export interface Match {
   id: number;
@@ -103,6 +104,7 @@ function extractLeagueName(match: Match): string | null {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const t = useT();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -345,7 +347,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-[#030817] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/50">Loading...</p>
+          <p className="text-white/50">{t("common.loading")}</p>
         </div>
       </div>
     );

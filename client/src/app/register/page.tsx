@@ -22,9 +22,11 @@ import {
   validatePassword,
   getPasswordStrength,
 } from "@/lib/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,24 +62,23 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Validation
     if (!name.trim()) {
-      setError("Please enter your name");
+      setError(t("auth.register.errorName"));
       return;
     }
 
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
+      setError(t("auth.register.errorEmail"));
       return;
     }
 
     if (!passwordValidation.valid) {
-      setError("Please meet all password requirements");
+      setError(t("auth.register.errorPassword"));
       return;
     }
 
     if (!acceptTerms) {
-      setError("Please accept the terms and conditions");
+      setError(t("auth.register.errorTerms"));
       return;
     }
 
@@ -87,13 +88,12 @@ export default function RegisterPage() {
       const response = await register({ name, email, password });
 
       if (response.success) {
-        // Redirect to OTP verification
         router.push(`/verify?email=${encodeURIComponent(email)}&type=register`);
       } else {
-        setError(response.message || "Registration failed. Please try again.");
+        setError(response.message || t("auth.register.errorFailed"));
       }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch {
+      setError(t("auth.register.errorGeneric"));
     } finally {
       setIsLoading(false);
     }
@@ -106,17 +106,17 @@ export default function RegisterPage() {
       if (response.success) {
         router.push("/dashboard");
       } else {
-        setError(response.message || "Google sign-up failed");
+        setError(response.message || t("auth.register.errorFailed"));
       }
-    } catch (err) {
-      setError("Google sign-up failed. Please try again.");
+    } catch {
+      setError(t("auth.register.errorGoogle"));
     }
   };
 
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Start analyzing football with behavioral intelligence"
+      title={t("auth.register.title")}
+      subtitle={t("auth.register.subtitle")}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Error Message */}
@@ -138,7 +138,7 @@ export default function RegisterPage() {
             htmlFor="name"
             className="mb-2 block text-sm font-medium text-white/70"
           >
-            Full name
+            {t("auth.register.nameLabel")}
           </label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -149,7 +149,7 @@ export default function RegisterPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
+              placeholder={t("auth.register.namePlaceholder")}
               autoComplete="name"
               disabled={isLoading}
               className="
@@ -173,7 +173,7 @@ export default function RegisterPage() {
             htmlFor="email"
             className="mb-2 block text-sm font-medium text-white/70"
           >
-            Email address
+            {t("auth.register.emailLabel")}
           </label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -184,7 +184,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("auth.register.emailPlaceholder")}
               autoComplete="email"
               disabled={isLoading}
               className="
@@ -208,7 +208,7 @@ export default function RegisterPage() {
             htmlFor="password"
             className="mb-2 block text-sm font-medium text-white/70"
           >
-            Password
+            {t("auth.register.passwordLabel")}
           </label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -219,7 +219,7 @@ export default function RegisterPage() {
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a strong password"
+              placeholder={t("auth.register.passwordPlaceholder")}
               autoComplete="new-password"
               disabled={isLoading}
               className="
@@ -262,17 +262,16 @@ export default function RegisterPage() {
                         : "text-emerald-400"
                   }`}
                 >
-                  {passwordStrength}
+                  {t(`auth.register.strength${passwordStrength[0].toUpperCase()}${passwordStrength.slice(1)}`)}
                 </span>
               </div>
 
-              {/* Requirements */}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "8+ characters", met: password.length >= 8 },
-                  { label: "Uppercase letter", met: /[A-Z]/.test(password) },
-                  { label: "Lowercase letter", met: /[a-z]/.test(password) },
-                  { label: "Number", met: /[0-9]/.test(password) },
+                  { label: t("auth.register.reqEightChars"), met: password.length >= 8 },
+                  { label: t("auth.register.reqUpper"), met: /[A-Z]/.test(password) },
+                  { label: t("auth.register.reqLower"), met: /[a-z]/.test(password) },
+                  { label: t("auth.register.reqNumber"), met: /[0-9]/.test(password) },
                 ].map((req, i) => (
                   <div key={i} className="flex items-center gap-2">
                     {req.met ? (
@@ -314,19 +313,19 @@ export default function RegisterPage() {
             {acceptTerms && <Check size={14} weight="bold" />}
           </button>
           <span className="text-sm text-white/50">
-            I agree to IntelX's{" "}
+            {t("auth.register.acceptTermsPrefix")}{" "}
             <Link
               href="/terms"
               className="text-violet-400 hover:text-violet-300"
             >
-              Terms of Service
+              {t("auth.register.termsOfService")}
             </Link>{" "}
-            and{" "}
+            {t("auth.register.and")}{" "}
             <Link
               href="/privacy"
               className="text-violet-400 hover:text-violet-300"
             >
-              Privacy Policy
+              {t("auth.register.privacyPolicy")}
             </Link>
           </span>
         </div>
@@ -350,32 +349,29 @@ export default function RegisterPage() {
           {isLoading ? (
             <SpinnerGap size={20} className="mx-auto animate-spin" />
           ) : (
-            "Create account"
+            t("auth.register.submit")
           )}
         </button>
 
-        {/* Divider */}
         <div className="relative flex items-center gap-4 py-2">
           <div className="h-px flex-1 bg-white/10" />
-          <span className="text-xs text-white/30">or continue with</span>
+          <span className="text-xs text-white/30">{t("auth.register.orContinueWith")}</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        {/* Google Button */}
         <GoogleButton
           onSuccess={handleGoogleSuccess}
-          onError={() => setError("Google sign-in failed")}
+          onError={() => setError(t("auth.register.errorGoogle"))}
           text="signup"
         />
 
-        {/* Sign In Link */}
         <p className="text-center text-sm text-white/50">
-          Already have an account?{" "}
+          {t("auth.register.haveAccount")}{" "}
           <Link
             href="/login"
             className="font-semibold text-violet-400 hover:text-violet-300"
           >
-            Sign in
+            {t("auth.register.loginCta")}
           </Link>
         </p>
       </form>

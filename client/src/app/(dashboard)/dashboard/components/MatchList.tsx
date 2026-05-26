@@ -2,6 +2,8 @@
 
 import { Match } from "../page";
 import { Clock, Loader2, AlertCircle, Trophy, ChevronRight, Target, Flame, CornerDownRight, CreditCard } from "lucide-react";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface MatchListProps {
   matches: Match[];
@@ -154,20 +156,34 @@ function getCompetitionInfo(match: Match): { name: string; country: string } {
   return { name: "Unknown", country: "" };
 }
 
-function getStateConfig(state: string) {
+type StateConfig = {
+  bg: string;
+  text: string;
+  border: string;
+  dot: string;
+  labelKey: "live" | "finished" | "upcoming";
+  pulse: boolean;
+};
+
+function getStateConfig(state: string): StateConfig {
   switch (state) {
     case "live":
-      return { bg: "bg-green-500/10", text: "text-green-400", border: "border-green-500/20", dot: "bg-green-500", label: "LIVE", pulse: true };
+      return { bg: "bg-green-500/10", text: "text-green-400", border: "border-green-500/20", dot: "bg-green-500", labelKey: "live", pulse: true };
     case "finished":
-      return { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20", dot: "bg-slate-500", label: "FT", pulse: false };
+      return { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20", dot: "bg-slate-500", labelKey: "finished", pulse: false };
     default:
-      return { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/20", dot: "bg-cyan-500", label: "UPCOMING", pulse: false };
+      return { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/20", dot: "bg-cyan-500", labelKey: "upcoming", pulse: false };
   }
 }
 
-function formatKickoff(unix: number | null): string {
+function formatKickoff(unix: number | null, locale: string): string {
   if (!unix) return "--:--";
-  return new Date(unix * 1000).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const localeTag = locale === "es" ? "es-ES" : "en-US";
+  return new Date(unix * 1000).toLocaleTimeString(localeTag, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: locale !== "es",
+  });
 }
 
 function TeamLogo({ src, name }: { src: string | null; name: string }) {
@@ -229,6 +245,7 @@ function BTTSIndicator({ value }: { value: number }) {
 }
 
 function XGBar({ homeXg, awayXg, homeName, awayName }: { homeXg: number; awayXg: number; homeName: string; awayName: string }) {
+  const t = useT();
   const total = homeXg + awayXg || 1;
   const homePercent = (homeXg / total) * 100;
   const diff = Math.abs(homePercent - 50);
@@ -248,7 +265,7 @@ function XGBar({ homeXg, awayXg, homeName, awayName }: { homeXg: number; awayXg:
           {homeXg.toFixed(2)}
         </span>
         <span className="text-[8px]">
-          {isBalanced ? "xG · balanced" : "xG"}
+          {isBalanced ? `xG · ${t("dashboard.list.noFavored")}` : "xG"}
         </span>
         <span className={awayFavored ? "text-orange-300 font-semibold" : ""}>
           {awayXg.toFixed(2)}
@@ -269,10 +286,12 @@ function XGBar({ homeXg, awayXg, homeName, awayName }: { homeXg: number; awayXg:
 }
 
 function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: boolean; onClick: () => void }) {
+  const t = useT();
+  const { locale } = useLanguage();
   const stateConfig = getStateConfig(match.state);
   const homeImg = buildImageUrl(match.payload?.home_image);
   const awayImg = buildImageUrl(match.payload?.away_image);
-  
+
   const homeXg = match.payload?.team_a_xg_prematch || 0;
   const awayXg = match.payload?.team_b_xg_prematch || 0;
   const totalXg = match.payload?.total_xg_prematch || 0;
@@ -281,28 +300,31 @@ function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: b
   const btts = match.payload?.btts_potential || 0;
   const corners = match.payload?.corners_potential || 0;
   const cards = match.payload?.cards_potential || 0;
-  
+
   const hasData = totalXg > 0 || btts > 0;
   const isUpcoming = match.state === "scheduled" || match.state === "upcoming";
+  const ppgLabel = t("dashboard.detail.ppg");
 
   return (
     <div
       onClick={onClick}
       className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-200 border
-        ${isSelected 
-          ? "bg-gradient-to-br from-cyan-500/20 via-cyan-500/10 to-transparent border-cyan-500/40 shadow-lg shadow-cyan-500/10" 
+        ${isSelected
+          ? "bg-gradient-to-br from-cyan-500/20 via-cyan-500/10 to-transparent border-cyan-500/40 shadow-lg shadow-cyan-500/10"
           : "bg-[#0a1628]/80 border-white/5 hover:bg-[#0c1a30] hover:border-white/10"}`}
     >
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2 text-[11px] text-white/40">
           <Clock className="w-3 h-3" />
-          <span>{formatKickoff(match.kickoffUnix)}</span>
+          <span>{formatKickoff(match.kickoffUnix, locale)}</span>
         </div>
         <div className="flex items-center gap-2">
           {btts >= 50 && isUpcoming && <BTTSIndicator value={btts} />}
           <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${stateConfig.bg} ${stateConfig.border} border`}>
             <span className={`w-1.5 h-1.5 rounded-full ${stateConfig.dot} ${stateConfig.pulse ? "animate-pulse" : ""}`} />
-            <span className={`text-[10px] font-bold ${stateConfig.text}`}>{stateConfig.label}</span>
+            <span className={`text-[10px] font-bold ${stateConfig.text}`}>
+              {t(`dashboard.statusBadge.${stateConfig.labelKey}`)}
+            </span>
           </div>
         </div>
       </div>
@@ -314,7 +336,7 @@ function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: b
             <div className="flex-1 min-w-0">
               <span className="text-sm font-medium text-white truncate block">{match.home.name}</span>
               {hasData && isUpcoming && (
-                <span className="text-[10px] text-white/30">PPG: {homePpg.toFixed(2)}</span>
+                <span className="text-[10px] text-white/30">{ppgLabel}: {homePpg.toFixed(2)}</span>
               )}
             </div>
           </div>
@@ -331,7 +353,7 @@ function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: b
             <div className="flex-1 min-w-0">
               <span className="text-sm font-medium text-white truncate block">{match.away.name}</span>
               {hasData && isUpcoming && (
-                <span className="text-[10px] text-white/30">PPG: {awayPpg.toFixed(2)}</span>
+                <span className="text-[10px] text-white/30">{ppgLabel}: {awayPpg.toFixed(2)}</span>
               )}
             </div>
           </div>
@@ -348,17 +370,17 @@ function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: b
           <XGBar homeXg={homeXg} awayXg={awayXg} homeName={match.home.name} awayName={match.away.name} />
           
           <div className="flex items-center gap-1.5 flex-wrap">
-            <MicroStat icon={Target} value={totalXg.toFixed(1)} label="Total xG" color="#22d3ee" />
-            <MicroStat icon={CornerDownRight} value={corners.toFixed(0)} label="Corners" color="#f59e0b" />
-            <MicroStat icon={CreditCard} value={cards.toFixed(1)} label="Cards" color="#ef4444" />
-            {btts < 50 && <MicroStat icon={Flame} value={`${btts}%`} label="BTTS" color="#94a3b8" />}
+            <MicroStat icon={Target} value={totalXg.toFixed(1)} label={t("dashboard.microStats.totalXg")} color="#22d3ee" />
+            <MicroStat icon={CornerDownRight} value={corners.toFixed(0)} label={t("dashboard.microStats.corners")} color="#f59e0b" />
+            <MicroStat icon={CreditCard} value={cards.toFixed(1)} label={t("dashboard.microStats.cards")} color="#ef4444" />
+            {btts < 50 && <MicroStat icon={Flame} value={`${btts}%`} label={t("dashboard.microStats.btts")} color="#94a3b8" />}
           </div>
         </div>
       )}
 
       {!hasData && isUpcoming && (
         <div className="mt-2 pt-2 border-t border-white/5">
-          <span className="text-[10px] text-white/20 italic">Stats pending...</span>
+          <span className="text-[10px] text-white/20 italic">{t("dashboard.list.statsPending")}</span>
         </div>
       )}
 
@@ -369,12 +391,14 @@ function MatchCard({ match, isSelected, onClick }: { match: Match; isSelected: b
 }
 
 export default function MatchList({ matches, selectedMatch, onSelectMatch, isLoading, error }: MatchListProps) {
+  const t = useT();
+
   if (isLoading) {
     return (
       <div className="bg-[#071427] rounded-2xl border border-white/5 p-8">
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
-          <p className="text-white/40 text-sm">Loading matches...</p>
+          <p className="text-white/40 text-sm">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -385,7 +409,7 @@ export default function MatchList({ matches, selectedMatch, onSelectMatch, isLoa
       <div className="bg-[#071427] rounded-2xl border border-red-500/20 p-8">
         <div className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="w-8 h-8 text-red-400 mb-4" />
-          <p className="text-red-400 font-medium mb-2">Failed to load matches</p>
+          <p className="text-red-400 font-medium mb-2">{t("common.error")}</p>
           <p className="text-white/40 text-sm">{error}</p>
         </div>
       </div>
@@ -397,7 +421,7 @@ export default function MatchList({ matches, selectedMatch, onSelectMatch, isLoa
       <div className="bg-[#071427] rounded-2xl border border-white/5 p-8">
         <div className="flex flex-col items-center justify-center py-12">
           <Trophy className="w-8 h-8 text-white/20 mb-4" />
-          <p className="text-white/40">No matches found</p>
+          <p className="text-white/40">{t("dashboard.noMatches")}</p>
         </div>
       </div>
     );
@@ -428,9 +452,13 @@ export default function MatchList({ matches, selectedMatch, onSelectMatch, isLoa
       <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-cyan-500/5 to-transparent">
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-cyan-500" />
-          <span className="text-sm font-semibold text-white">{matches.length} Matches</span>
+          <span className="text-sm font-semibold text-white">
+            {t("dashboard.list.countLabel", { count: matches.length })}
+          </span>
         </div>
-        <span className="text-[10px] text-white/30">{competitions.length} leagues</span>
+        <span className="text-[10px] text-white/30">
+          {t("dashboard.list.leaguesLabel", { count: competitions.length })}
+        </span>
       </div>
       
       <div className="max-h-[calc(100vh-280px)] overflow-y-auto">

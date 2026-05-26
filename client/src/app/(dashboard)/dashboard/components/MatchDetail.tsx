@@ -1,6 +1,7 @@
 "use client";
 
 import { Match, MatchAnalysis } from "../page";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import {
   Loader2,
   Zap,
@@ -924,6 +925,8 @@ export default function MatchDetail({
   isAnalysisLoading,
   onRequestAnalysis,
 }: MatchDetailProps) {
+  const t = useT();
+
   if (!match) {
     return (
       <div className="bg-gradient-to-br from-[#071427] to-[#0a1628] rounded-2xl border border-white/5 p-12 flex flex-col items-center justify-center min-h-[500px]">
@@ -931,10 +934,10 @@ export default function MatchDetail({
           <BarChart3 className="w-10 h-10 text-cyan-500/50" />
         </div>
         <p className="text-white/60 text-xl font-semibold mb-2">
-          Select a match
+          {t("dashboard.selectMatch.title")}
         </p>
         <p className="text-white/30 text-sm">
-          Click on any match to view detailed analysis
+          {t("dashboard.selectMatch.hint")}
         </p>
       </div>
     );
