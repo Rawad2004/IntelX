@@ -111,6 +111,15 @@ const COUNTRY_FLAGS: Record<string, string> = {
   // Otros
   newzealand: "🇳🇿",
   israel: "🇮🇱",
+
+  // Confederaciones / regiones (torneos continentales)
+  southamerica: "🌎",
+  northamerica: "🌎",
+  europe: "🇪🇺",
+  africa: "🌍",
+  asia: "🌏",
+  world: "🌐",
+  international: "🌐",
 };
 
 function getCountryFlag(countryName: string): string | null {
@@ -125,20 +134,24 @@ function buildImageUrl(path: string | null | undefined): string | null {
 }
 
 function getCompetitionInfo(match: Match): { name: string; country: string } {
-  let name = match.payload?.competition_name || match.payload?.league_name || "";
-  let country = "";
-  
-  // Extraer país del path de imagen
+  const apiName = match.payload?.competition_name || match.payload?.league_name || "";
+  const apiCountry = match.payload?.country || "";
+
+  if (apiName) {
+    return { name: apiName, country: apiCountry };
+  }
+
   const imgPath = match.payload?.home_image || "";
   const countryMatch = imgPath.match(/teams\/([a-z]+)-/i);
   if (countryMatch) {
-    country = countryMatch[1].toLowerCase();
-    if (!name) {
-      name = country.charAt(0).toUpperCase() + country.slice(1);
-    }
+    const fallbackCountry = countryMatch[1].toLowerCase();
+    return {
+      name: fallbackCountry.charAt(0).toUpperCase() + fallbackCountry.slice(1),
+      country: fallbackCountry,
+    };
   }
-  
-  return { name, country };
+
+  return { name: "Unknown", country: "" };
 }
 
 function getStateConfig(state: string) {
@@ -185,9 +198,16 @@ function TeamLogo({ src, name }: { src: string | null; name: string }) {
 
 function MicroStat({ icon: Icon, value, label, color }: { icon: any; value: string | number; label: string; color: string }) {
   return (
-    <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5" title={label}>
-      <Icon className="w-3 h-3" style={{ color }} />
-      <span className="text-[10px] font-semibold text-white/70">{value}</span>
+    <div
+      className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5"
+      title={`${label}: ${value}`}
+      aria-label={`${label}: ${value}`}
+    >
+      <Icon className="w-3 h-3" style={{ color }} aria-hidden="true" />
+      <span className="text-[10px] font-semibold text-white/70 tabular-nums">{value}</span>
+      <span className="text-[9px] font-medium text-white/40 uppercase tracking-wide hidden sm:inline">
+        {label}
+      </span>
     </div>
   );
 }
@@ -211,20 +231,35 @@ function BTTSIndicator({ value }: { value: number }) {
 function XGBar({ homeXg, awayXg, homeName, awayName }: { homeXg: number; awayXg: number; homeName: string; awayName: string }) {
   const total = homeXg + awayXg || 1;
   const homePercent = (homeXg / total) * 100;
-  
+  const diff = Math.abs(homePercent - 50);
+  const isBalanced = diff < 5;
+  const homeFavored = homePercent > 57;
+  const awayFavored = homePercent < 43;
+
   return (
-    <div className="w-full" title={`xG: ${homeName} ${homeXg.toFixed(2)} - ${awayXg.toFixed(2)} ${awayName}`}>
+    <div
+      className="w-full"
+      title={`xG: ${homeName} ${homeXg.toFixed(2)} - ${awayXg.toFixed(2)} ${awayName}`}
+      role="img"
+      aria-label={`Expected goals: ${homeName} ${homeXg.toFixed(2)} versus ${awayName} ${awayXg.toFixed(2)}`}
+    >
       <div className="flex items-center justify-between text-[9px] text-white/40 mb-1">
-        <span>{homeXg.toFixed(1)}</span>
-        <span className="text-[8px]">xG</span>
-        <span>{awayXg.toFixed(1)}</span>
+        <span className={homeFavored ? "text-cyan-300 font-semibold" : ""}>
+          {homeXg.toFixed(2)}
+        </span>
+        <span className="text-[8px]">
+          {isBalanced ? "xG · balanced" : "xG"}
+        </span>
+        <span className={awayFavored ? "text-orange-300 font-semibold" : ""}>
+          {awayXg.toFixed(2)}
+        </span>
       </div>
       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
-        <div 
+        <div
           className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-300"
           style={{ width: `${homePercent}%` }}
         />
-        <div 
+        <div
           className="h-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-300"
           style={{ width: `${100 - homePercent}%` }}
         />
