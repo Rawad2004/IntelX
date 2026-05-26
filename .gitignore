@@ -1,0 +1,46 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editor
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Claude / agent tooling
+.claude/worktrees/
+.claude/local/
+
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json.bak
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Coverage / testing
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/
+
+# Misc
+.cache/
+tmp/
