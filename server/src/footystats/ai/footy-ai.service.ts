@@ -369,7 +369,31 @@ Responde SIEMPRE en JSON válido con esta estructura exacta:
 3. Si no hay lineups, añade disclaimer sobre incertidumbre
 4. Prioriza datos recientes (last 5) sobre históricos
 5. El H2H es contexto, no determinante
-6. Siempre considera el contexto de liga`;
+6. Siempre considera el contexto de liga
+7. CRÍTICO: Si un campo aparece como "N/D" o "Sin datos", reconócelo
+   explícitamente como dato no disponible. NUNCA digas "el promedio es 0.00",
+   "0 goles por partido", "0%" o frases similares cuando el dato sea N/D —
+   eso es alucinación. Di "los datos de la liga no están disponibles" u omite
+   la métrica por completo.`;
+  }
+
+  /**
+   * Formatea un número opcional para el prompt. Si es 0 o falsy, devuelve "N/D".
+   * Evita que el modelo verbalice "0.00" como si fuera un dato real cuando en
+   * realidad significa "dato no disponible".
+   */
+  private fmtNum(value: number | null | undefined, digits = 2): string {
+    if (value === null || value === undefined) return 'N/D';
+    const n = Number(value);
+    if (!Number.isFinite(n) || n === 0) return 'N/D';
+    return n.toFixed(digits);
+  }
+
+  private fmtPct(value: number | null | undefined): string {
+    if (value === null || value === undefined) return 'N/D';
+    const n = Number(value);
+    if (!Number.isFinite(n) || n === 0) return 'N/D';
+    return `${n}%`;
   }
 
   /**
@@ -390,49 +414,51 @@ ${data.match.home.name} (Local) vs ${data.match.away.name} (Visitante)
 - Venue: ${data.match.venue || 'No especificado'}
 
 ### H2H (Head to Head)
-${data.h2h ? `
+${data.h2h && data.h2h.totalMatches > 0 ? `
 - Total partidos: ${data.h2h.totalMatches}
 - Victorias local: ${data.h2h.homeWins}
 - Victorias visitante: ${data.h2h.awayWins}
 - Empates: ${data.h2h.draws}
-- Promedio goles: ${data.h2h.avgGoals}
-- BTTS histórico: ${data.h2h.bttsPercentage}%
-- Over 2.5 histórico: ${data.h2h.over25Percentage}%
-` : 'Sin datos H2H disponibles'}
+- Promedio goles: ${this.fmtNum(data.h2h.avgGoals)}
+- BTTS histórico: ${this.fmtPct(data.h2h.bttsPercentage)}
+- Over 2.5 histórico: ${this.fmtPct(data.h2h.over25Percentage)}
+` : 'Sin datos H2H disponibles (omitir referencias a enfrentamientos previos)'}
 
 ### FORMA RECIENTE (Últimos 5 partidos)
 **${data.match.home.name}:**
 ${data.form.home.last5 ? `
 - Record: ${data.form.home.last5.wins}W-${data.form.home.last5.draws}D-${data.form.home.last5.losses}L
-- Goles a favor avg: ${data.form.home.last5.goalsForAvg.toFixed(2)}
-- Goles en contra avg: ${data.form.home.last5.goalsAgainstAvg.toFixed(2)}
-- xG a favor: ${data.form.home.last5.xgFor.toFixed(2)}
-- Clean sheets: ${data.form.home.last5.cleanSheetPct}%
-- BTTS: ${data.form.home.last5.bttsPct}%
-- Over 2.5: ${data.form.home.last5.over25Pct}%
-- PPG: ${data.form.home.last5.ppg.toFixed(2)}
-` : 'Sin datos de forma'}
+- Goles a favor avg: ${this.fmtNum(data.form.home.last5.goalsForAvg)}
+- Goles en contra avg: ${this.fmtNum(data.form.home.last5.goalsAgainstAvg)}
+- xG a favor: ${this.fmtNum(data.form.home.last5.xgFor)}
+- Clean sheets: ${this.fmtPct(data.form.home.last5.cleanSheetPct)}
+- BTTS: ${this.fmtPct(data.form.home.last5.bttsPct)}
+- Over 2.5: ${this.fmtPct(data.form.home.last5.over25Pct)}
+- PPG: ${this.fmtNum(data.form.home.last5.ppg)}
+` : 'Sin datos de forma reciente disponibles'}
 
 **${data.match.away.name}:**
 ${data.form.away.last5 ? `
 - Record: ${data.form.away.last5.wins}W-${data.form.away.last5.draws}D-${data.form.away.last5.losses}L
-- Goles a favor avg: ${data.form.away.last5.goalsForAvg.toFixed(2)}
-- Goles en contra avg: ${data.form.away.last5.goalsAgainstAvg.toFixed(2)}
-- xG a favor: ${data.form.away.last5.xgFor.toFixed(2)}
-- Clean sheets: ${data.form.away.last5.cleanSheetPct}%
-- BTTS: ${data.form.away.last5.bttsPct}%
-- Over 2.5: ${data.form.away.last5.over25Pct}%
-- PPG: ${data.form.away.last5.ppg.toFixed(2)}
-` : 'Sin datos de forma'}
+- Goles a favor avg: ${this.fmtNum(data.form.away.last5.goalsForAvg)}
+- Goles en contra avg: ${this.fmtNum(data.form.away.last5.goalsAgainstAvg)}
+- xG a favor: ${this.fmtNum(data.form.away.last5.xgFor)}
+- Clean sheets: ${this.fmtPct(data.form.away.last5.cleanSheetPct)}
+- BTTS: ${this.fmtPct(data.form.away.last5.bttsPct)}
+- Over 2.5: ${this.fmtPct(data.form.away.last5.over25Pct)}
+- PPG: ${this.fmtNum(data.form.away.last5.ppg)}
+` : 'Sin datos de forma reciente disponibles'}
 
 ### CONTEXTO DE LIGA
 ${data.leagueContext ? `
-- Promedio goles/partido: ${data.leagueContext.avgGoals.toFixed(2)}
-- Promedio corners/partido: ${data.leagueContext.avgCorners.toFixed(2)}
-- Promedio tarjetas/partido: ${data.leagueContext.avgCards.toFixed(2)}
-- BTTS liga: ${data.leagueContext.bttsPercentage}%
-- Over 2.5 liga: ${data.leagueContext.over25Percentage}%
-` : 'Sin contexto de liga'}
+- Promedio goles/partido: ${this.fmtNum(data.leagueContext.avgGoals)}
+- Promedio corners/partido: ${this.fmtNum(data.leagueContext.avgCorners)}
+- Promedio tarjetas/partido: ${this.fmtNum(data.leagueContext.avgCards)}
+- BTTS liga: ${this.fmtPct(data.leagueContext.bttsPercentage)}
+- Over 2.5 liga: ${this.fmtPct(data.leagueContext.over25Percentage)}
+NOTA: Los valores "N/D" significan dato no disponible. NO los describas como
+"0.00", "0%" o "promedio cero" en el análisis — son datos faltantes, no ceros.
+` : 'Sin contexto de liga (omitir referencias a promedios de la liga en el análisis)'}
 
 ### ÁRBITRO
 ${data.referee ? `

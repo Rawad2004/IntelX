@@ -34,6 +34,7 @@ import {
 import { FootystatsService } from '../../footystats.service';
 import { FootyStoreService } from '../../footy-store.service';
 import { BehavioralAnalysisService } from '../../services/behavioral-analysis.service'; // ✅ NUEVO
+import { LeaguesService } from './leagues.service';
 import { getBogotaDateKey } from '../../utils/footy-date.util';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -87,8 +88,41 @@ export class FootystatsFrontendController {
   constructor(
     private readonly footystatsService: FootystatsService,
     private readonly storeService: FootyStoreService,
-    private readonly behavioralService: BehavioralAnalysisService, // ✅ NUEVO
+    private readonly behavioralService: BehavioralAnalysisService,
+    private readonly leaguesService: LeaguesService,
   ) {}
+
+  /**
+   * Resuelve metadatos de la liga (name, country, image) cuando FootyStats
+   * today_matches no los trae. Usa el cache de LeaguesService.list().
+   */
+  private async enrichCompetitionMeta(items: any[]): Promise<void> {
+    const ids = new Set<number>();
+    for (const it of items) {
+      const cid = Number(it?.payload?.competition_id ?? it?.competitionId);
+      if (Number.isFinite(cid) && cid > 0) ids.add(cid);
+    }
+    if (ids.size === 0) return;
+
+    const resolved = new Map<number, any>();
+    await Promise.all(
+      Array.from(ids).map(async (id) => {
+        const league = await this.leaguesService.findById(id);
+        if (league) resolved.set(id, league);
+      }),
+    );
+
+    for (const it of items) {
+      const p = it.payload || (it.payload = {});
+      const cid = Number(p.competition_id ?? it.competitionId);
+      const league = resolved.get(cid);
+      if (!league) continue;
+
+      if (!p.competition_name) p.competition_name = league.name;
+      if (!p.country) p.country = league.country;
+      if (!p.competition_image) p.competition_image = league.image;
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 1️⃣ GET /api/footystats/matches
@@ -135,6 +169,10 @@ export class FootystatsFrontendController {
       const items = (result.items || []).map((item: any) =>
         this.transformMatchForFrontend(item),
       );
+
+      // Enriquecer competition_name / country / image desde LeaguesService
+      // (FootyStats today_matches no los trae)
+      await this.enrichCompetitionMeta(items);
 
       return {
         ok: true,
