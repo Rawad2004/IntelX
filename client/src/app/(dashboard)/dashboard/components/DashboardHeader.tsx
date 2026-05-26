@@ -5,9 +5,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { BarChart2, Settings, LogOut } from "lucide-react";
 import { clearTokens } from "@/lib/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import LanguageToggle from "@/components/LanguageToggle";
 
 export default function DashboardHeader() {
   const router = useRouter();
+  const t = useT();
 
   const handleLogout = () => {
     clearTokens();
@@ -37,31 +40,32 @@ export default function DashboardHeader() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-400 text-sm font-medium"
             >
               <BarChart2 className="w-4 h-4" />
-              <span>Matches</span>
+              <span>{t("nav.matches")}</span>
             </Link>
             <Link
               href="/dashboard/analytics"
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors"
             >
               <BarChart2 className="w-4 h-4" />
-              <span>Analytics</span>
+              <span>{t("nav.analytics")}</span>
             </Link>
             <Link
               href="/dashboard/settings"
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors"
             >
               <Settings className="w-4 h-4" />
-              <span>Settings</span>
+              <span>{t("nav.settings")}</span>
             </Link>
           </nav>
 
           <div className="flex items-center gap-2">
+            <LanguageToggle />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/50 hover:text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t("nav.logout")}</span>
             </button>
           </div>
         </div>
