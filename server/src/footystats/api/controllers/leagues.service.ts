@@ -39,18 +39,46 @@ function normalizeImageUrl(image: string | null | undefined, fallbackBase: strin
 }
 
 /**
- * Normaliza los datos de una liga
+ * Aplana las temporadas de una liga de FootyStats.
+ *
+ * FootyStats /league-list shape:
+ *   { name, country, league_name, image, season: [{ id, year }, ...] }
+ *
+ * Cada match en today_matches viene con competition_id = season.id (no league id),
+ * así que necesitamos un registro por temporada para poder resolver por ID.
  */
-function normalizeLeague(raw: any, imageBase: string) {
-  return {
-    id: raw.id,
-    name: raw.name,
-    country: raw.country,
-    countryCode: raw.country_code,
-    season: raw.season,
-    image: normalizeImageUrl(raw.image, imageBase),
-    isCurrent: raw.is_current === 1,
-  };
+function flattenLeagueSeasons(raw: any, imageBase: string): any[] {
+  const seasons = Array.isArray(raw?.season) ? raw.season : [];
+  const image = normalizeImageUrl(raw?.image, imageBase);
+  const name = raw?.name || raw?.league_name || null;
+  const country = raw?.country ?? null;
+  const countryCode = raw?.country_code ?? null;
+
+  if (seasons.length === 0) {
+    return raw?.id
+      ? [
+          {
+            id: raw.id,
+            name,
+            country,
+            countryCode,
+            image,
+            year: null,
+          },
+        ]
+      : [];
+  }
+
+  return seasons
+    .filter((s: any) => Number.isFinite(Number(s?.id)))
+    .map((s: any) => ({
+      id: Number(s.id),
+      name,
+      country,
+      countryCode,
+      image,
+      year: s?.year ?? null,
+    }));
 }
 
 @Injectable()
@@ -127,12 +155,14 @@ export class LeaguesService {
 
         const response = await this.request<any>('/league-list', requestParams);
         const data = Array.isArray(response?.data) ? response.data : [];
-        
-        let leagues = data.map((x: any) => normalizeLeague(x, this.imageBase));
 
-        // Ordenar por país y nombre
-        leagues.sort((a: any, b: any) => 
-          (a.country ?? '').localeCompare(b.country ?? '') || 
+        const leagues: any[] = [];
+        for (const item of data) {
+          leagues.push(...flattenLeagueSeasons(item, this.imageBase));
+        }
+
+        leagues.sort((a: any, b: any) =>
+          (a.country ?? '').localeCompare(b.country ?? '') ||
           (a.name ?? '').localeCompare(b.name ?? '')
         );
 
@@ -150,5 +180,37 @@ export class LeaguesService {
     }
 
     return allLeagues;
+  }
+
+  /**
+   * Busca una liga por competitionId (FootyStats season id).
+   * Devuelve null si no se encuentra o si la llamada falla.
+   * Usa el cache compartido de list() — primera llamada llena el cache,
+   * siguientes son lookups en memoria.
+   */
+  async findById(competitionId: number | null | undefined): Promise<{
+    id: number;
+    name: string | null;
+    country: string | null;
+    image: string | null;
+  } | null> {
+    if (!competitionId || !Number.isFinite(competitionId)) return null;
+
+    try {
+      const all = await this.list();
+      const found = all.find((l: any) => Number(l.id) === Number(competitionId));
+      if (!found) return null;
+      return {
+        id: found.id,
+        name: found.name ?? null,
+        country: found.country ?? null,
+        image: found.image ?? null,
+      };
+    } catch (err: any) {
+      this.logger.warn(
+        `findById(${competitionId}) failed: ${err?.message ?? err}`,
+      );
+      return null;
+    }
   }
 }

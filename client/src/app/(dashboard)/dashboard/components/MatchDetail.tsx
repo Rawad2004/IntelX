@@ -1201,13 +1201,15 @@ export default function MatchDetail({
                     <div className="flex items-center gap-2 mb-2">
                       <Activity className="w-4 h-4 text-white/30" />
                       <span className="text-[10px] text-white/40 uppercase">
-                        Avg Goals
+                        Combined PPG
                       </span>
                     </div>
                     <p className="text-xl font-bold text-white">
-                      {(((homePpg + awayPpg) / 2) * 2.5).toFixed(1)}
+                      {(homePpg + awayPpg).toFixed(2)}
                     </p>
-                    <p className="text-[10px] text-white/30">Based on PPG</p>
+                    <p className="text-[10px] text-white/30">
+                      Sum of pre-match PPG
+                    </p>
                   </div>
                 </div>
               )}
